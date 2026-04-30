@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+card.classList.remove("flipped");
+card.innerText="?";
+});
+document.getElementById("status").innerText="Begin matching!";
+lock=false;
+},10000);
+
+}
+
+function handleFlip(card){
+
+if(lock || card.classList.contains("matched") || card.classList.contains("flipped")) return;
+
+card.classList.add("flipped");
+card.innerText=card.dataset.text;
+
+if(!first){
+first=card;
+return;
+}
+
+second=card;
+lock=true;
+
+if(first.dataset.id===second.dataset.id){
+
+first.classList.add("matched");
+second.classList.add("matched");
+
+matches++;
+
+resetTurn();
+
+if(matches===pairs.length){
+document.getElementById("status").innerText="Nice work! You matched all terms.";
+}
+
+}else{
+
+setTimeout(()=>{
+first.classList.remove("flipped");
+second.classList.remove("flipped");
+first.innerText="?";
+second.innerText="?";
+resetTurn();
+},900);
+
+}
+
+}
+
+function resetTurn(){
+[first,second,lock]=[null,null,false];
+}
+
+function shuffleGame(){
+buildCards();
+renderBoard();
+resetStats();
+}
+
+function restartGame(){
+buildCards();
+renderBoard();
+resetStats();
+}
+
+function resetStats(){
+matches=0;
+first=null;
+second=null;
+lock=false;
+document.getElementById("status").innerText="";
+}
+
+buildCards();
+renderBoard();
+
+</script>
+
+</body>
+</html>
