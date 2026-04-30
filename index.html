@@ -2,9 +2,10 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>AI Vocabulary Memory Game</title>
+<title>AI Vocabulary Matching</title>
 
 <style>
+
 body{
 font-family: Arial, sans-serif;
 background:#f4f6f8;
@@ -15,62 +16,78 @@ justify-content:center;
 #container{
 width:700px;
 text-align:center;
-padding:10px;
-}
-
-#controls{
-margin:15px 0;
-}
-
-button{
-padding:10px 16px;
-margin:5px;
-font-size:14px;
-border:none;
-border-radius:6px;
-background:#2c7be5;
-color:white;
-cursor:pointer;
 }
 
 #game{
 display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:12px;
-margin-top:20px;
+grid-template-columns:1fr 1fr;
+gap:20px;
+margin-top:25px;
 }
 
-.card{
-height:120px;
-background:#2c7be5;
+.column{
+display:flex;
+flex-direction:column;
+gap:12px;
+}
+
+.term{
+background:#012169;
 color:white;
+padding:14px;
+border-radius:8px;
+cursor:grab;
+font-weight:bold;
+transition:transform .25s;
+}
+
+.definition{
+background:#E89923;
+color:white;
+padding:14px;
+border-radius:8px;
+min-height:60px;
 display:flex;
 align-items:center;
-justify-content:center;
-border-radius:10px;
-cursor:pointer;
-padding:12px;
-font-size:15px;
-text-align:center;
-line-height:1.3;
+transition:all .2s ease;
 }
 
-.card.flipped{
-background:white;
-color:#333;
-border:2px solid #2c7be5;
-}
-
-.card.matched{
+.definition.correct{
 background:#6cc070;
+}
+
+.definition.hover{
+outline:4px solid #FFD166;
+transform:scale(1.02);
+}
+
+.shake{
+animation:shake .35s;
+}
+
+@keyframes shake{
+0%{transform:translateX(0)}
+25%{transform:translateX(-6px)}
+50%{transform:translateX(6px)}
+75%{transform:translateX(-6px)}
+100%{transform:translateX(0)}
+}
+
+button{
+margin-top:15px;
+padding:10px 16px;
+border:none;
+background:#012169;
 color:white;
-cursor:default;
+border-radius:6px;
+cursor:pointer;
 }
 
 #status{
-margin-top:15px;
-font-size:16px;
+margin-top:20px;
+font-weight:bold;
 }
+
 </style>
 </head>
 
@@ -79,152 +96,159 @@ font-size:16px;
 <div id="container">
 
 <h3>Match the AI Vocabulary</h3>
-<p>Study the cards first, then find the pairs.</p>
+<p>Drag each term onto its correct definition.</p>
 
-<div id="controls">
-<button onclick="shuffleGame()">Shuffle</button>
-<button onclick="restartGame()">Replay</button>
+<div id="game">
+
+<div class="column" id="terms"></div>
+
+<div class="column" id="definitions"></div>
+
 </div>
 
-<div id="game"></div>
-<div id="status"></div>
+<button onclick="startGame()">Shuffle</button>
+
+<div id="status" aria-live="polite"></div>
 
 </div>
 
 <script>
 
 const pairs = [
-["Machine Learning","Systems that identify patterns in data and use those patterns to answer questions"],
-["Labels","Known outcomes attached to past examples"],
-["Generative AI","Produces new content such as summaries, drafts, or responses using patterns learned from large datasets"],
-["Training","Exposing a model to large numbers of examples so it can begin identifying patterns in the dataset"],
-["Learning","When a model adjusts its internal parameters to better reflect patterns in the examples it was trained on"]
+
+{
+term:"Machine Learning",
+definition:"Systems that identify patterns in data and use those patterns to answer questions"
+},
+
+{
+term:"Labels",
+definition:"Known outcomes attached to past examples"
+},
+
+{
+term:"Generative AI",
+definition:"Produces new content such as summaries, drafts, or responses using patterns learned from large datasets"
+},
+
+{
+term:"Training",
+definition:"Exposing a model to large numbers of examples so it can begin identifying patterns in the dataset"
+},
+
+{
+term:"Learning",
+definition:"When a model adjusts its internal parameters to better reflect patterns in the examples it was trained on"
+}
+
 ];
 
-let cards=[];
-let first=null;
-let second=null;
-let lock=false;
+let dragged=null;
 let matches=0;
 
-function buildCards(){
-cards=[];
-pairs.forEach(pair=>{
-cards.push({text:pair[0],id:pair[0]});
-cards.push({text:pair[1],id:pair[0]});
-});
-cards.sort(()=>Math.random()-0.5);
+function shuffle(arr){
+return arr.sort(()=>Math.random()-0.5);
 }
 
-function renderBoard(){
+function startGame(){
 
-const game=document.getElementById("game");
-game.innerHTML="";
+matches=0;
+document.getElementById("status").innerText="";
 
-cards.forEach(cardData=>{
+const termsDiv=document.getElementById("terms");
+const defsDiv=document.getElementById("definitions");
+
+termsDiv.innerHTML="";
+defsDiv.innerHTML="";
+
+const shuffledTerms=shuffle([...pairs]);
+const shuffledDefs=shuffle([...pairs]);
+
+shuffledTerms.forEach(p=>{
+
 const card=document.createElement("div");
-card.className="card";
-card.dataset.id=cardData.id;
-card.dataset.text=cardData.text;
-card.innerText="?";
-card.onclick=()=>handleFlip(card);
-game.appendChild(card);
+card.className="term";
+card.draggable=true;
+card.innerText=p.term;
+card.dataset.match=p.term;
+
+/* accessibility improvements */
+card.setAttribute("tabindex","0");
+card.setAttribute("role","button");
+card.setAttribute("aria-label","Vocabulary term: " + p.term + ". Drag to match its definition.");
+
+card.addEventListener("dragstart",()=>{
+dragged=card;
 });
 
-startPreview();
-}
+termsDiv.appendChild(card);
 
-function startPreview(){
-
-lock=true;
-document.getElementById("status").innerText="Study the cards...";
-
-const allCards=document.querySelectorAll(".card");
-
-allCards.forEach(card=>{
-card.classList.add("flipped");
-card.innerText=card.dataset.text;
 });
 
-setTimeout(()=>{
-allCards.forEach(card=>{
-card.classList.remove("flipped");
-card.innerText="?";
+shuffledDefs.forEach(p=>{
+
+const drop=document.createElement("div");
+drop.className="definition";
+drop.innerText=p.definition;
+drop.dataset.match=p.term;
+
+/* accessibility improvements */
+drop.setAttribute("tabindex","0");
+drop.setAttribute("aria-label","Definition: " + p.definition);
+
+drop.addEventListener("dragover",function(e){
+e.preventDefault();
+this.classList.add("hover");
 });
-document.getElementById("status").innerText="Begin matching!";
-lock=false;
-},10000);
 
-}
+drop.addEventListener("dragleave",function(){
+this.classList.remove("hover");
+});
 
-function handleFlip(card){
+drop.addEventListener("drop",function(e){
 
-if(lock || card.classList.contains("matched") || card.classList.contains("flipped")) return;
+e.preventDefault();
+this.classList.remove("hover");
 
-card.classList.add("flipped");
-card.innerText=card.dataset.text;
+if(!dragged) return;
 
-if(!first){
-first=card;
-return;
-}
+if(dragged.dataset.match===this.dataset.match){
 
-second=card;
-lock=true;
+this.classList.add("correct");
 
-if(first.dataset.id===second.dataset.id){
+/* snap into place */
+this.innerHTML="";
+this.appendChild(dragged);
 
-first.classList.add("matched");
-second.classList.add("matched");
+dragged.style.cursor="default";
+dragged.draggable=false;
 
 matches++;
 
-resetTurn();
-
 if(matches===pairs.length){
-document.getElementById("status").innerText="Nice work! You matched all terms.";
+document.getElementById("status").innerText="Nice work! All matches complete.";
 }
 
 }else{
 
+/* bounce feedback */
+this.classList.add("shake");
+
 setTimeout(()=>{
-first.classList.remove("flipped");
-second.classList.remove("flipped");
-first.innerText="?";
-second.innerText="?";
-resetTurn();
-},900);
+this.classList.remove("shake");
+},350);
 
 }
 
+});
+
+defsDiv.appendChild(drop);
+
+});
+
 }
 
-function resetTurn(){
-[first,second,lock]=[null,null,false];
-}
-
-function shuffleGame(){
-buildCards();
-renderBoard();
-resetStats();
-}
-
-function restartGame(){
-buildCards();
-renderBoard();
-resetStats();
-}
-
-function resetStats(){
-matches=0;
-first=null;
-second=null;
-lock=false;
-document.getElementById("status").innerText="";
-}
-
-buildCards();
-renderBoard();
+startGame();
 
 </script>
 
