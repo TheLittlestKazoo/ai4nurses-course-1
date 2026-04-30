@@ -1,0 +1,6 @@
+{
+  "name": "AI Vocabulary Memory Game",
+  "description": "Interactive memory game for matching AI terms with their definitions.",
+  "version": "1.0",
+  "entry": "index.html"
+}
